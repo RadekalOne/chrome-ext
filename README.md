@@ -64,14 +64,23 @@ A Chrome extension that recognizes Pokemon card images and displays their curren
 
 ## Usage
 
-### Uploading an Image
+### Method 1: Right-Click on Any Image (EASIEST!)
+
+1. Navigate to any webpage with Pokemon card images
+2. **Right-click** on a Pokemon card image
+3. Select **"Analyze Pokemon Card"** from the context menu
+4. The extension icon will open automatically with results!
+
+This is the simplest and most reliable method!
+
+### Method 2: Upload an Image
 
 1. Click the extension icon in your Chrome toolbar
 2. Click the upload area or drag and drop a Pokemon card image
 3. Click "Analyze Card"
 4. View the results with pricing and trends
 
-### Capturing from a Webpage
+### Method 3: Capture from Webpage
 
 1. Navigate to a webpage with Pokemon card images
 2. Click the extension icon

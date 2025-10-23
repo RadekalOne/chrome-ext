@@ -1,4 +1,16 @@
-# Quick Start - Fix Icon Error
+# Quick Start Guide
+
+## 🎉 EASIEST WAY TO USE THE EXTENSION
+
+Once installed, simply:
+1. Go to any webpage with Pokemon card images
+2. **Right-click** on any card image
+3. Select **"Analyze Pokemon Card"**
+4. Results appear automatically!
+
+---
+
+# Icon Setup (First Time Only)
 
 ## ❌ Error: "Could not load icon 'icons/icon16.png'"
 
