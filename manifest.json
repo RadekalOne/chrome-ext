@@ -5,7 +5,8 @@
   "description": "Recognize Pokemon cards and check their market prices with 3-month trends",
   "permissions": [
     "activeTab",
-    "storage"
+    "storage",
+    "scripting"
   ],
   "host_permissions": [
     "https://api.pokemontcg.io/*",

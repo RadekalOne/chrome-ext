@@ -49,20 +49,44 @@ captureBtn.addEventListener('click', async () => {
     try {
         const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
 
-        chrome.tabs.sendMessage(tab.id, { action: 'captureImage' }, (response) => {
-            if (chrome.runtime.lastError) {
-                showError('Please refresh the page and try again.');
-                return;
-            }
+        // Check if we can access this tab
+        if (tab.url.startsWith('chrome://') || tab.url.startsWith('chrome-extension://') || tab.url.startsWith('edge://')) {
+            showError('Cannot capture from Chrome system pages. Please navigate to a regular webpage.');
+            return;
+        }
 
-            if (response && response.imageData) {
-                handleImageData(response.imageData);
-            } else {
-                showError('No image found on the page. Please try uploading an image instead.');
-            }
-        });
+        // Try to inject content script if not already loaded
+        try {
+            await chrome.scripting.executeScript({
+                target: { tabId: tab.id },
+                files: ['content.js']
+            });
+        } catch (injectError) {
+            // Script might already be injected, continue
+            console.log('Script injection note:', injectError.message);
+        }
+
+        // Small delay to ensure script is loaded
+        setTimeout(() => {
+            chrome.tabs.sendMessage(tab.id, { action: 'captureImage' }, (response) => {
+                if (chrome.runtime.lastError) {
+                    showError('Unable to access this page. Try refreshing the page or use a different website.');
+                    console.error('Message error:', chrome.runtime.lastError.message);
+                    return;
+                }
+
+                if (response && response.success && response.imageData) {
+                    handleImageData(response.imageData);
+                } else if (response && response.error) {
+                    showError(response.error);
+                } else {
+                    showError('No image found on the page. Please try uploading an image instead.');
+                }
+            });
+        }, 100);
     } catch (error) {
         showError('Failed to capture image from page: ' + error.message);
+        console.error('Capture error:', error);
     }
 });
 

@@ -1,10 +1,19 @@
-// Listen for messages from popup
-chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-    if (request.action === 'captureImage') {
-        captureImageFromPage(sendResponse);
-        return true; // Keep the message channel open for async response
-    }
-});
+// Prevent multiple injections
+if (window.pokemonCardExtensionLoaded) {
+    console.log('Pokemon Card Extension content script already loaded');
+} else {
+    window.pokemonCardExtensionLoaded = true;
+
+    // Listen for messages from popup
+    chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+        if (request.action === 'captureImage') {
+            captureImageFromPage(sendResponse);
+            return true; // Keep the message channel open for async response
+        }
+    });
+
+    console.log('Pokemon Card Extension content script loaded');
+}
 
 function captureImageFromPage(sendResponse) {
     // Find all images on the page

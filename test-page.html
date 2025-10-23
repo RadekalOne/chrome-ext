@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pokemon Card Test Page</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        h1 {
+            color: #667eea;
+            text-align: center;
+        }
+        .instructions {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        .gallery {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 20px;
+        }
+        .card-container {
+            background: white;
+            padding: 15px;
+            border-radius: 10px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+        .card-container img {
+            max-width: 100%;
+            height: auto;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+        .card-container img:hover {
+            transform: scale(1.05);
+        }
+        .card-name {
+            margin-top: 10px;
+            font-weight: bold;
+            color: #333;
+        }
+        .step {
+            background: #eef2ff;
+            padding: 10px 15px;
+            border-left: 4px solid #667eea;
+            margin: 10px 0;
+        }
+        code {
+            background: #e2e8f0;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: monospace;
+        }
+    </style>
+</head>
+<body>
+    <h1>🎴 Pokemon Card Extension - Test Page</h1>
+
+    <div class="instructions">
+        <h2>How to Test the "Capture from Page" Feature</h2>
+
+        <div class="step">
+            <strong>Step 1:</strong> Make sure the Pokemon Card Price Checker extension is installed and enabled.
+        </div>
+
+        <div class="step">
+            <strong>Step 2:</strong> Click the extension icon in your Chrome toolbar.
+        </div>
+
+        <div class="step">
+            <strong>Step 3:</strong> Click the "Capture from Page" button.
+        </div>
+
+        <div class="step">
+            <strong>Step 4:</strong> The page should dim with a dark overlay. Click on any Pokemon card image below.
+        </div>
+
+        <div class="step">
+            <strong>Step 5:</strong> The extension will analyze the card and show you pricing information.
+        </div>
+
+        <p><strong>Note:</strong> These are sample images from external URLs. Click on any card below to test the capture functionality!</p>
+    </div>
+
+    <div class="gallery">
+        <div class="card-container">
+            <img src="https://images.pokemontcg.io/swsh4/25_hires.png" alt="Pikachu VMAX">
+            <div class="card-name">Pikachu VMAX</div>
+        </div>
+
+        <div class="card-container">
+            <img src="https://images.pokemontcg.io/swsh4/44_hires.png" alt="Charizard V">
+            <div class="card-name">Charizard V</div>
+        </div>
+
+        <div class="card-container">
+            <img src="https://images.pokemontcg.io/swsh1/140_hires.png" alt="Lapras VMAX">
+            <div class="card-name">Lapras VMAX</div>
+        </div>
+
+        <div class="card-container">
+            <img src="https://images.pokemontcg.io/base1/4_hires.png" alt="Charizard Base Set">
+            <div class="card-name">Charizard (Base Set)</div>
+        </div>
+
+        <div class="card-container">
+            <img src="https://images.pokemontcg.io/xy1/23_hires.png" alt="Blastoise">
+            <div class="card-name">Blastoise EX</div>
+        </div>
+
+        <div class="card-container">
+            <img src="https://images.pokemontcg.io/swsh2/162_hires.png" alt="Mew">
+            <div class="card-name">Mew V</div>
+        </div>
+    </div>
+
+    <div class="instructions" style="margin-top: 30px;">
+        <h3>Troubleshooting</h3>
+        <ul>
+            <li>If clicking "Capture from Page" shows an error, try <strong>refreshing this page</strong> and try again.</li>
+            <li>Make sure the extension has permission to access this page.</li>
+            <li>Check the browser console (F12) for any error messages.</li>
+            <li>If it still doesn't work, you can always upload a Pokemon card image directly from your computer.</li>
+        </ul>
+    </div>
+</body>
+</html>
