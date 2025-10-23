@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pokemon Card Price Checker</title>
+    <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Pokemon Card Scanner</h1>
+            <p class="subtitle">Identify cards and check prices</p>
+        </header>
+
+        <div class="upload-section">
+            <div class="upload-area" id="uploadArea">
+                <svg class="upload-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                    <polyline points="17 8 12 3 7 8"></polyline>
+                    <line x1="12" y1="3" x2="12" y2="15"></line>
+                </svg>
+                <p class="upload-text">Drop image here or click to upload</p>
+                <p class="upload-hint">Supports JPG, PNG, WebP</p>
+                <input type="file" id="fileInput" accept="image/*" hidden>
+            </div>
+
+            <button class="btn btn-secondary" id="captureBtn">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path>
+                    <circle cx="12" cy="13" r="4"></circle>
+                </svg>
+                Capture from Page
+            </button>
+        </div>
+
+        <div class="preview-section" id="previewSection" style="display: none;">
+            <div class="image-preview">
+                <img id="previewImage" alt="Card preview">
+                <button class="btn-close" id="clearBtn">&times;</button>
+            </div>
+            <button class="btn btn-primary" id="analyzeBtn">
+                <span id="analyzeText">Analyze Card</span>
+                <span id="analyzeLoader" class="loader" style="display: none;"></span>
+            </button>
+        </div>
+
+        <div class="results-section" id="resultsSection" style="display: none;">
+            <div class="card-info">
+                <h2 id="cardName"></h2>
+                <div class="card-details">
+                    <span class="detail-item" id="cardSet"></span>
+                    <span class="detail-item" id="cardNumber"></span>
+                    <span class="detail-item" id="cardRarity"></span>
+                </div>
+            </div>
+
+            <div class="price-container">
+                <div class="price-card">
+                    <div class="price-label">Current Market Price</div>
+                    <div class="price-value" id="currentPrice">--</div>
+                </div>
+
+                <div class="trend-card">
+                    <div class="trend-header">
+                        <span class="trend-label">3-Month Trend</span>
+                        <span class="trend-change" id="trendChange">--</span>
+                    </div>
+                    <canvas id="trendChart"></canvas>
+                </div>
+            </div>
+
+            <div class="market-links" id="marketLinks">
+                <a href="#" target="_blank" class="market-link" id="tcgplayerLink">View on TCGPlayer</a>
+                <a href="#" target="_blank" class="market-link" id="cardmarketLink">View on Cardmarket</a>
+            </div>
+
+            <button class="btn btn-secondary" id="scanAnotherBtn">Scan Another Card</button>
+        </div>
+
+        <div class="error-section" id="errorSection" style="display: none;">
+            <div class="error-message">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <line x1="12" y1="8" x2="12" y2="12"></line>
+                    <line x1="12" y1="16" x2="12.01" y2="16"></line>
+                </svg>
+                <p id="errorText"></p>
+            </div>
+            <button class="btn btn-secondary" id="retryBtn">Try Again</button>
+        </div>
+    </div>
+
+    <script src="popup.js"></script>
+</body>
+</html>

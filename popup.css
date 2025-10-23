@@ -1,0 +1,329 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    min-height: 600px;
+    width: 400px;
+}
+
+.container {
+    padding: 20px;
+}
+
+header {
+    text-align: center;
+    margin-bottom: 25px;
+    color: white;
+}
+
+h1 {
+    font-size: 24px;
+    font-weight: 700;
+    margin-bottom: 5px;
+}
+
+.subtitle {
+    font-size: 14px;
+    opacity: 0.9;
+}
+
+.upload-section {
+    margin-bottom: 20px;
+}
+
+.upload-area {
+    background: white;
+    border: 2px dashed #cbd5e0;
+    border-radius: 12px;
+    padding: 40px 20px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    margin-bottom: 15px;
+}
+
+.upload-area:hover {
+    border-color: #667eea;
+    background: #f7fafc;
+}
+
+.upload-area.drag-over {
+    border-color: #667eea;
+    background: #edf2f7;
+    transform: scale(0.98);
+}
+
+.upload-icon {
+    width: 48px;
+    height: 48px;
+    color: #667eea;
+    margin-bottom: 10px;
+}
+
+.upload-text {
+    font-size: 16px;
+    font-weight: 600;
+    color: #2d3748;
+    margin-bottom: 5px;
+}
+
+.upload-hint {
+    font-size: 12px;
+    color: #718096;
+}
+
+.btn {
+    width: 100%;
+    padding: 12px 20px;
+    border: none;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    transition: all 0.2s ease;
+}
+
+.btn-primary {
+    background: #667eea;
+    color: white;
+}
+
+.btn-primary:hover {
+    background: #5a67d8;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+}
+
+.btn-primary:disabled {
+    background: #a0aec0;
+    cursor: not-allowed;
+    transform: none;
+}
+
+.btn-secondary {
+    background: white;
+    color: #667eea;
+}
+
+.btn-secondary:hover {
+    background: #f7fafc;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.btn-close {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background: rgba(0, 0, 0, 0.6);
+    color: white;
+    border: none;
+    border-radius: 50%;
+    width: 30px;
+    height: 30px;
+    font-size: 20px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+}
+
+.btn-close:hover {
+    background: rgba(0, 0, 0, 0.8);
+}
+
+.preview-section {
+    margin-bottom: 20px;
+}
+
+.image-preview {
+    position: relative;
+    background: white;
+    border-radius: 12px;
+    overflow: hidden;
+    margin-bottom: 15px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.image-preview img {
+    width: 100%;
+    height: auto;
+    display: block;
+}
+
+.loader {
+    width: 16px;
+    height: 16px;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    border-top-color: white;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+.results-section {
+    background: white;
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 15px;
+}
+
+.card-info {
+    margin-bottom: 20px;
+    text-align: center;
+}
+
+.card-info h2 {
+    font-size: 20px;
+    color: #2d3748;
+    margin-bottom: 10px;
+}
+
+.card-details {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.detail-item {
+    background: #edf2f7;
+    padding: 4px 12px;
+    border-radius: 12px;
+    font-size: 12px;
+    color: #4a5568;
+}
+
+.price-container {
+    margin-bottom: 20px;
+}
+
+.price-card {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 20px;
+    border-radius: 12px;
+    text-align: center;
+    margin-bottom: 15px;
+}
+
+.price-label {
+    font-size: 12px;
+    opacity: 0.9;
+    margin-bottom: 5px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.price-value {
+    font-size: 32px;
+    font-weight: 700;
+}
+
+.trend-card {
+    background: #f7fafc;
+    padding: 15px;
+    border-radius: 12px;
+}
+
+.trend-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+}
+
+.trend-label {
+    font-size: 12px;
+    font-weight: 600;
+    color: #4a5568;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.trend-change {
+    font-size: 14px;
+    font-weight: 700;
+    padding: 4px 8px;
+    border-radius: 6px;
+}
+
+.trend-change.positive {
+    color: #38a169;
+    background: #c6f6d5;
+}
+
+.trend-change.negative {
+    color: #e53e3e;
+    background: #fed7d7;
+}
+
+.trend-change.neutral {
+    color: #718096;
+    background: #e2e8f0;
+}
+
+#trendChart {
+    width: 100%;
+    height: 150px;
+}
+
+.market-links {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 15px;
+}
+
+.market-link {
+    flex: 1;
+    padding: 10px;
+    background: #edf2f7;
+    color: #667eea;
+    text-decoration: none;
+    text-align: center;
+    border-radius: 8px;
+    font-size: 12px;
+    font-weight: 600;
+    transition: all 0.2s ease;
+}
+
+.market-link:hover {
+    background: #667eea;
+    color: white;
+    transform: translateY(-1px);
+}
+
+.error-section {
+    background: white;
+    border-radius: 12px;
+    padding: 30px 20px;
+    text-align: center;
+    margin-bottom: 15px;
+}
+
+.error-message {
+    color: #e53e3e;
+    margin-bottom: 20px;
+}
+
+.error-message svg {
+    margin-bottom: 10px;
+}
+
+.error-message p {
+    font-size: 14px;
+    line-height: 1.5;
+}
