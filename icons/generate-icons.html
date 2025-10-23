@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Generate Extension Icons</title>
+</head>
+<body>
+    <h1>Icon Generator</h1>
+    <p>This will generate the extension icons. Open this file in a browser and the icons will download automatically.</p>
+
+    <canvas id="canvas16" width="16" height="16" style="display:none;"></canvas>
+    <canvas id="canvas48" width="48" height="48" style="display:none;"></canvas>
+    <canvas id="canvas128" width="128" height="128" style="display:none;"></canvas>
+
+    <script>
+        function generateIcon(size) {
+            const canvas = document.getElementById(`canvas${size}`);
+            const ctx = canvas.getContext('2d');
+
+            // Background gradient
+            const gradient = ctx.createLinearGradient(0, 0, size, size);
+            gradient.addColorStop(0, '#667eea');
+            gradient.addColorStop(1, '#764ba2');
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, size, size);
+
+            // Draw a Pokeball-like icon
+            ctx.save();
+            ctx.translate(size / 2, size / 2);
+
+            // White circle (top half)
+            ctx.fillStyle = '#ffffff';
+            ctx.beginPath();
+            ctx.arc(0, -size * 0.1, size * 0.3, 0, Math.PI, true);
+            ctx.fill();
+
+            // Red circle (bottom half)
+            ctx.fillStyle = '#ff0000';
+            ctx.beginPath();
+            ctx.arc(0, size * 0.1, size * 0.3, Math.PI, 0, true);
+            ctx.fill();
+
+            // Center line
+            ctx.fillStyle = '#000000';
+            ctx.fillRect(-size * 0.3, -size * 0.03, size * 0.6, size * 0.06);
+
+            // Center circle outline
+            ctx.strokeStyle = '#000000';
+            ctx.lineWidth = size * 0.02;
+            ctx.beginPath();
+            ctx.arc(0, 0, size * 0.08, 0, Math.PI * 2);
+            ctx.stroke();
+
+            // Center circle fill
+            ctx.fillStyle = '#ffffff';
+            ctx.beginPath();
+            ctx.arc(0, 0, size * 0.06, 0, Math.PI * 2);
+            ctx.fill();
+
+            ctx.restore();
+
+            // Download
+            canvas.toBlob((blob) => {
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `icon${size}.png`;
+                a.click();
+                URL.revokeObjectURL(url);
+            });
+        }
+
+        // Generate all icons
+        setTimeout(() => generateIcon(16), 100);
+        setTimeout(() => generateIcon(48), 200);
+        setTimeout(() => generateIcon(128), 300);
+    </script>
+</body>
+</html>
