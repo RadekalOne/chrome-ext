@@ -35,6 +35,42 @@ function createImageSelectionOverlay(images, sendResponse) {
         existingOverlay.remove();
     }
 
+    console.log(`Found ${images.length} total images on page`);
+
+    let highlightedCount = 0;
+    const selectableImages = [];
+
+    // Filter and prepare images first
+    images.forEach((img) => {
+        // Skip very small images (likely icons)
+        if (img.width < 100 || img.height < 100) return;
+
+        highlightedCount++;
+        selectableImages.push(img);
+
+        // Store original styles
+        img.dataset.originalOutline = img.style.outline || '';
+        img.dataset.originalCursor = img.style.cursor || '';
+        img.dataset.originalZIndex = img.style.zIndex || '';
+        img.dataset.originalPointerEvents = img.style.pointerEvents || '';
+        img.dataset.originalPosition = img.style.position || '';
+
+        // Apply highlight styles
+        img.style.outline = '4px solid #667eea !important';
+        img.style.cursor = 'pointer !important';
+        img.style.position = img.style.position || 'relative';
+        img.style.zIndex = '2147483646';
+        img.style.pointerEvents = 'auto';
+        img.classList.add('pokemon-card-selectable');
+    });
+
+    console.log(`Highlighted ${highlightedCount} images for selection`);
+
+    if (highlightedCount === 0) {
+        sendResponse({ success: false, error: 'No suitable images found (must be at least 100x100 pixels)' });
+        return;
+    }
+
     // Create overlay container
     const overlay = document.createElement('div');
     overlay.id = 'pokemon-card-overlay';
@@ -45,7 +81,7 @@ function createImageSelectionOverlay(images, sendResponse) {
         width: 100%;
         height: 100%;
         background: rgba(0, 0, 0, 0.8);
-        z-index: 2147483647;
+        z-index: 2147483645;
         display: flex;
         flex-direction: column;
         align-items: center;
@@ -66,7 +102,7 @@ function createImageSelectionOverlay(images, sendResponse) {
         border-radius: 10px;
         pointer-events: auto;
     `;
-    instruction.textContent = 'Click on a Pokemon card image to analyze it';
+    instruction.textContent = `Click on an image to analyze it (${highlightedCount} found)`;
     overlay.appendChild(instruction);
 
     // Create close button
@@ -83,73 +119,59 @@ function createImageSelectionOverlay(images, sendResponse) {
         font-size: 14px;
         font-weight: bold;
         cursor: pointer;
-        z-index: 2147483648;
+        z-index: 2147483647;
         pointer-events: auto;
     `;
     closeBtn.onclick = () => {
         console.log('Cancel button clicked');
-        overlay.remove();
-        removeHighlights();
+        cleanup();
         sendResponse({ success: false, error: 'Cancelled by user' });
     };
     overlay.appendChild(closeBtn);
 
     document.body.appendChild(overlay);
 
-    console.log(`Found ${images.length} total images on page`);
+    // Global click handler at document level
+    let isProcessing = false;
 
-    let highlightedCount = 0;
+    const handleDocumentClick = function(e) {
+        console.log('Document click detected', e.target);
 
-    // Highlight images and add click handlers
-    images.forEach((img) => {
-        // Skip very small images (likely icons)
-        if (img.width < 100 || img.height < 100) return;
+        // Check if clicked element is or contains a selectable image
+        let clickedImg = null;
 
-        highlightedCount++;
+        if (e.target.classList.contains('pokemon-card-selectable')) {
+            clickedImg = e.target;
+        } else if (e.target.tagName === 'IMG') {
+            // Check if this image is in our selectable list
+            const imgElement = selectableImages.find(img => img === e.target);
+            if (imgElement) clickedImg = imgElement;
+        }
 
-        // Add highlight effect
-        const originalOutline = img.style.outline;
-        const originalCursor = img.style.cursor;
-        const originalZIndex = img.style.zIndex;
-        const originalPointerEvents = img.style.pointerEvents;
+        if (clickedImg && !isProcessing) {
+            console.log('Selectable image clicked!', clickedImg.src);
+            isProcessing = true;
 
-        img.style.outline = '4px solid #667eea';
-        img.style.cursor = 'pointer';
-        img.style.zIndex = '2147483646';
-        img.style.pointerEvents = 'auto';
-        img.classList.add('pokemon-card-selectable');
-
-        const hoverHandler = function() {
-            this.style.outline = '6px solid #5a67d8';
-            this.style.boxShadow = '0 0 20px rgba(102, 126, 234, 0.8)';
-        };
-
-        const leaveHandler = function() {
-            this.style.outline = '4px solid #667eea';
-            this.style.boxShadow = 'none';
-        };
-
-        const clickHandler = function(e) {
-            console.log('Image clicked!', this.src);
             e.preventDefault();
             e.stopPropagation();
             e.stopImmediatePropagation();
 
             // Visual feedback
-            this.style.outline = '6px solid #48bb78';
+            clickedImg.style.outline = '6px solid #48bb78';
+            clickedImg.style.boxShadow = '0 0 30px rgba(72, 187, 120, 1)';
             instruction.textContent = 'Capturing image...';
             instruction.style.background = 'rgba(72, 187, 120, 0.9)';
 
-            // Remove event listeners from all images
-            document.querySelectorAll('.pokemon-card-selectable').forEach(img => {
+            // Disable all images
+            selectableImages.forEach(img => {
                 img.style.pointerEvents = 'none';
+                img.style.cursor = 'wait';
             });
 
             // Convert image to data URL
-            convertImageToDataURL(this, (dataUrl) => {
+            convertImageToDataURL(clickedImg, (dataUrl) => {
                 console.log('Conversion result:', dataUrl ? 'Success' : 'Failed');
-                overlay.remove();
-                removeHighlights();
+                cleanup();
 
                 if (dataUrl) {
                     sendResponse({ success: true, imageData: dataUrl });
@@ -157,34 +179,56 @@ function createImageSelectionOverlay(images, sendResponse) {
                     sendResponse({ success: false, error: 'Failed to capture image. Try a different image or upload directly.' });
                 }
             });
-        };
+        }
+    };
 
-        img.addEventListener('mouseenter', hoverHandler);
-        img.addEventListener('mouseleave', leaveHandler);
-        img.addEventListener('click', clickHandler, { capture: true });
+    // Add event listeners at document level with capture
+    document.addEventListener('click', handleDocumentClick, { capture: true });
 
-        // Store original styles and handlers for cleanup
-        img.dataset.originalOutline = originalOutline;
-        img.dataset.originalCursor = originalCursor;
-        img.dataset.originalZIndex = originalZIndex;
-        img.dataset.originalPointerEvents = originalPointerEvents;
+    // Also add to each image directly as backup
+    selectableImages.forEach((img) => {
+        img.addEventListener('mouseenter', function() {
+            if (!isProcessing) {
+                this.style.outline = '6px solid #5a67d8';
+                this.style.boxShadow = '0 0 20px rgba(102, 126, 234, 0.8)';
+            }
+        });
+
+        img.addEventListener('mouseleave', function() {
+            if (!isProcessing) {
+                this.style.outline = '4px solid #667eea';
+                this.style.boxShadow = 'none';
+            }
+        });
+
+        // Direct click handler as backup
+        img.addEventListener('click', function(e) {
+            console.log('Direct image click handler fired');
+            handleDocumentClick(e);
+        }, { capture: true });
     });
 
-    console.log(`Highlighted ${highlightedCount} images for selection`);
-
-    if (highlightedCount === 0) {
-        instruction.textContent = 'No suitable images found (must be at least 100x100 pixels)';
-        instruction.style.background = 'rgba(229, 62, 62, 0.9)';
+    function cleanup() {
+        console.log('Cleaning up overlay and event listeners');
+        overlay.remove();
+        document.removeEventListener('click', handleDocumentClick, { capture: true });
+        removeHighlights();
     }
+
+    // Store cleanup function for later use
+    overlay._cleanup = cleanup;
 }
 
 function removeHighlights() {
     const selectableImages = document.querySelectorAll('.pokemon-card-selectable');
+    console.log(`Removing highlights from ${selectableImages.length} images`);
+
     selectableImages.forEach((img) => {
         img.style.outline = img.dataset.originalOutline || '';
         img.style.cursor = img.dataset.originalCursor || '';
         img.style.zIndex = img.dataset.originalZIndex || '';
         img.style.pointerEvents = img.dataset.originalPointerEvents || '';
+        img.style.position = img.dataset.originalPosition || '';
         img.style.boxShadow = '';
         img.classList.remove('pokemon-card-selectable');
 
@@ -193,6 +237,7 @@ function removeHighlights() {
         delete img.dataset.originalCursor;
         delete img.dataset.originalZIndex;
         delete img.dataset.originalPointerEvents;
+        delete img.dataset.originalPosition;
     });
 }
 

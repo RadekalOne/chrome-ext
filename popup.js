@@ -16,6 +16,26 @@ const scanAnotherBtn = document.getElementById('scanAnotherBtn');
 
 let currentImageData = null;
 
+// Check for stored analysis from context menu
+chrome.storage.local.get(['lastAnalysis', 'lastAnalysisTime'], (result) => {
+    if (result.lastAnalysis && result.lastAnalysisTime) {
+        // Check if analysis is recent (within last 30 seconds)
+        const timeSinceAnalysis = Date.now() - result.lastAnalysisTime;
+        if (timeSinceAnalysis < 30000) {
+            console.log('Displaying stored analysis from context menu');
+
+            if (result.lastAnalysis.success) {
+                displayResults(result.lastAnalysis.data);
+            } else {
+                showError(result.lastAnalysis.error || 'Analysis failed');
+            }
+
+            // Clear the stored analysis
+            chrome.storage.local.remove(['lastAnalysis', 'lastAnalysisTime']);
+        }
+    }
+});
+
 // Upload area interactions
 uploadArea.addEventListener('click', () => fileInput.click());
 

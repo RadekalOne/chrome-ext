@@ -207,11 +207,53 @@ function getDateWeeksAgo(weeks) {
     return date.toISOString().split('T')[0];
 }
 
-// API configuration storage
+// API configuration storage and context menu setup
 chrome.runtime.onInstalled.addListener(() => {
     chrome.storage.sync.get(['apiKey'], (result) => {
         if (!result.apiKey) {
             console.log('No API key found. Using free tier.');
         }
     });
+
+    // Create context menu for images
+    chrome.contextMenus.create({
+        id: 'analyzePokemonCard',
+        title: 'Analyze Pokemon Card',
+        contexts: ['image']
+    });
+
+    console.log('Context menu created');
+});
+
+// Handle context menu clicks
+chrome.contextMenus.onClicked.addListener((info, tab) => {
+    if (info.menuItemId === 'analyzePokemonCard') {
+        console.log('Context menu clicked for image:', info.srcUrl);
+
+        // Fetch and convert image
+        fetch(info.srcUrl)
+            .then(response => response.blob())
+            .then(blob => {
+                const reader = new FileReader();
+                reader.onloadend = () => {
+                    const imageData = reader.result;
+
+                    // Analyze the card
+                    analyzeCard(imageData).then(result => {
+                        // Store result in storage for popup to retrieve
+                        chrome.storage.local.set({
+                            lastAnalysis: result,
+                            lastAnalysisTime: Date.now()
+                        }, () => {
+                            // Open popup or notify user
+                            chrome.action.openPopup();
+                        });
+                    });
+                };
+                reader.readAsDataURL(blob);
+            })
+            .catch(error => {
+                console.error('Failed to fetch image:', error);
+            });
+    }
 });
