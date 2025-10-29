@@ -43,14 +43,19 @@
 1. Navigate to any webpage with Pokemon card images (e.g., pokemon.com, tcgplayer.com, serebii.net)
 2. Click the extension icon
 3. Click "Capture from Page"
-4. **Expected**: Page dims, images are highlighted with blue borders
-5. Click on a Pokemon card image
-6. **Expected**: Image is captured and ready to analyze
-7. Click "Analyze Card"
-8. **Expected**:
+4. **Expected**: Popup closes (this is normal behavior)
+5. **Expected**: Page dims, images are highlighted with blue borders
+6. Click on a Pokemon card image
+7. **Expected**: Overlay disappears after clicking image
+8. **Click the extension icon again** to reopen the popup
+9. **Expected**: The captured image automatically appears in preview
+10. Click "Analyze Card"
+11. **Expected**:
    - OCR analyzes the captured card image
    - Extension identifies the specific card
    - Shows the actual card with real pricing data
+
+**Note**: The popup must close to allow interaction with the page. This is Chrome's default behavior. Simply reopen the popup after capturing to continue.
 
 #### Test 3: Results Display
 1. After analyzing a card, verify:

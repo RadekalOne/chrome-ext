@@ -1,25 +1,25 @@
 // Listen for messages from popup
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     if (request.action === 'captureImage') {
-        captureImageFromPage(sendResponse);
+        captureImageFromPage();
         return true; // Keep the message channel open for async response
     }
 });
 
-function captureImageFromPage(sendResponse) {
+function captureImageFromPage() {
     // Find all images on the page
     const images = Array.from(document.querySelectorAll('img'));
 
     if (images.length === 0) {
-        sendResponse({ success: false, error: 'No images found on this page' });
+        console.log('No images found on this page');
         return;
     }
 
     // Create overlay for image selection
-    createImageSelectionOverlay(images, sendResponse);
+    createImageSelectionOverlay(images);
 }
 
-function createImageSelectionOverlay(images, sendResponse) {
+function createImageSelectionOverlay(images) {
     // Create overlay container
     const overlay = document.createElement('div');
     overlay.id = 'pokemon-card-overlay';
@@ -71,7 +71,7 @@ function createImageSelectionOverlay(images, sendResponse) {
     closeBtn.onclick = () => {
         overlay.remove();
         removeHighlights();
-        sendResponse({ success: false, error: 'Cancelled by user' });
+        // No need to send response since popup is closed
     };
     overlay.appendChild(closeBtn);
 
@@ -105,14 +105,22 @@ function createImageSelectionOverlay(images, sendResponse) {
             e.stopPropagation();
 
             // Convert image to data URL
-            convertImageToDataURL(this, (dataUrl) => {
+            convertImageToDataURL(this, async (dataUrl) => {
                 overlay.remove();
                 removeHighlights();
 
                 if (dataUrl) {
-                    sendResponse({ success: true, imageData: dataUrl });
+                    // Store the captured image in chrome.storage
+                    // The popup will retrieve it when it reopens
+                    try {
+                        await chrome.storage.local.set({ capturedImage: dataUrl });
+                        // Open the popup again to show the captured image
+                        chrome.runtime.sendMessage({ action: 'imageCaptured' });
+                    } catch (error) {
+                        console.error('Error storing captured image:', error);
+                    }
                 } else {
-                    sendResponse({ success: false, error: 'Failed to capture image' });
+                    console.error('Failed to capture image');
                 }
             });
         }, { once: true });
