@@ -46,39 +46,25 @@ async function analyzeCard(imageData) {
 }
 
 async function extractTextFromImage(imageData) {
-    // Simple text extraction using Tesseract.js alternative
-    // For production, you'd want to use Google Cloud Vision API or similar
-    // For now, we'll use a simpler approach with pattern matching
+    // Note: Service workers in Manifest V3 don't have access to DOM or canvas
+    // For production, you'd want to use Google Cloud Vision API, AWS Rekognition, or similar
+    // For now, we'll return a placeholder that signals we should search the API
 
     try {
-        // Convert image to canvas and process
-        const img = await loadImage(imageData);
-        const canvas = document.createElement('canvas');
-        const ctx = canvas.getContext('2d');
+        // In a real implementation, you would:
+        // 1. Send the image to an OCR service (Google Cloud Vision, Tesseract.js in an offscreen document, etc.)
+        // 2. Extract the card name and other details
+        // 3. Return the extracted text
 
-        canvas.width = img.width;
-        canvas.height = img.height;
-        ctx.drawImage(img, 0, 0);
-
-        // For demo purposes, we'll return a mock result
-        // In production, implement proper OCR here
+        // For demo purposes, return a signal to search the API
         return {
-            fullText: '',
-            confidence: 0.8
+            fullText: 'pokemon card', // Generic search term
+            confidence: 0.5
         };
     } catch (error) {
         console.error('OCR error:', error);
         return null;
     }
-}
-
-function loadImage(dataUrl) {
-    return new Promise((resolve, reject) => {
-        const img = new Image();
-        img.onload = () => resolve(img);
-        img.onerror = reject;
-        img.src = dataUrl;
-    });
 }
 
 async function searchPokemonCard(extractedText) {
@@ -90,34 +76,71 @@ async function searchPokemonCard(extractedText) {
         // For now, we'll search for popular/recent cards as a fallback
         // In production, you'd use proper OCR to extract the card name
 
-        // For demo: Get a random popular card to show functionality
-        const response = await fetch(`${apiUrl}?pageSize=250&orderBy=-set.releaseDate`);
+        console.log('Searching for Pokemon cards...');
+
+        // For demo: Get recent cards with pricing data to show functionality
+        const response = await fetch(`${apiUrl}?pageSize=100&orderBy=-set.releaseDate&q=tcgplayer.prices.holofoil.market:[1 TO *]`);
 
         if (!response.ok) {
-            throw new Error('API request failed');
+            throw new Error(`API request failed with status ${response.status}`);
         }
 
         const data = await response.json();
 
         if (data.data && data.data.length > 0) {
-            // Return a random card from recent sets for demo
-            // In production, match based on OCR results
-            const randomCard = data.data[Math.floor(Math.random() * Math.min(50, data.data.length))];
+            // Filter cards that have pricing data
+            const cardsWithPrices = data.data.filter(card =>
+                card.tcgplayer && card.tcgplayer.prices &&
+                Object.keys(card.tcgplayer.prices).length > 0
+            );
+
+            if (cardsWithPrices.length > 0) {
+                // Return a random card with pricing data
+                const randomCard = cardsWithPrices[Math.floor(Math.random() * Math.min(20, cardsWithPrices.length))];
+                console.log('Found card:', randomCard.name);
+                return randomCard;
+            }
+
+            // If no cards with prices, return any card
+            const randomCard = data.data[Math.floor(Math.random() * Math.min(20, data.data.length))];
+            console.log('Found card (no pricing):', randomCard.name);
             return randomCard;
         }
 
-        return null;
+        throw new Error('No cards found in API response');
     } catch (error) {
         console.error('Search error:', error);
 
-        // Fallback: Return a mock card for demonstration
+        // Fallback: Try a simpler query without price filter
+        try {
+            const response = await fetch('https://api.pokemontcg.io/v2/cards?pageSize=50&orderBy=-set.releaseDate');
+            if (response.ok) {
+                const data = await response.json();
+                if (data.data && data.data.length > 0) {
+                    const randomCard = data.data[Math.floor(Math.random() * Math.min(10, data.data.length))];
+                    console.log('Fallback card found:', randomCard.name);
+                    return randomCard;
+                }
+            }
+        } catch (fallbackError) {
+            console.error('Fallback search also failed:', fallbackError);
+        }
+
+        // Last resort: Return a mock card for demonstration
         return {
             id: 'demo-card',
             name: 'Pikachu VMAX',
             set: { name: 'Vivid Voltage' },
             number: '044',
             rarity: 'Rare Holo VMAX',
-            tcgplayer: { url: 'https://www.tcgplayer.com' }
+            tcgplayer: {
+                url: 'https://www.tcgplayer.com',
+                prices: {
+                    holofoil: {
+                        market: 12.99
+                    }
+                }
+            }
         };
     }
 }
