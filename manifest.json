@@ -10,6 +10,8 @@
   "host_permissions": [
     "https://api.pokemontcg.io/*",
     "https://api.tcgplayer.com/*",
+    "https://api.ocr.space/*",
+    "https://ebay-average-selling-price.p.rapidapi.com/*",
     "https://*/*"
   ],
   "action": {

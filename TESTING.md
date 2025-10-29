@@ -9,6 +9,13 @@
 4. ✅ **Enhanced card search** - Improved API queries to prioritize cards with pricing data
 5. ✅ **All syntax validation passed** - All JS files and manifest.json are valid
 
+### NEW - OCR Integration:
+6. ✅ **Real OCR functionality** - Integrated OCR.space API for actual card text recognition
+7. ✅ **Pokemon TCG API key** - Added API key for better rate limits (10,000 requests/day)
+8. ✅ **Intelligent card matching** - Fuzzy search algorithm to find best card matches
+9. ✅ **eBay pricing fallback** - Added eBay average price API for cards without TCGPlayer data
+10. ✅ **Card parsing** - Extracts card name, HP, type, and set number from images
+
 ## How to Test the Extension
 
 ### 1. Load the Extension in Chrome
@@ -21,22 +28,29 @@
 
 ### 2. Basic Functionality Tests
 
-#### Test 1: Upload Image
+#### Test 1: Upload Image (With OCR)
 1. Click the extension icon in the toolbar
-2. Click the upload area or drag-and-drop an image
-3. Any Pokemon card image should work (or any image for demo)
+2. Click the upload area or drag-and-drop a Pokemon card image
+3. Use a clear image of a Pokemon card with visible text
 4. Click "Analyze Card"
-5. **Expected**: Shows a random Pokemon card with pricing and trend data
+5. **Expected**:
+   - OCR extracts text from the card
+   - Extension searches for the actual card by name
+   - Shows the identified card with real pricing and trend data
+   - Console logs show: "Performing OCR on card image..." and "Extracted card name from OCR: [card name]"
 
-#### Test 2: Capture from Page
-1. Navigate to any webpage with images (e.g., pokemon.com, tcgplayer.com)
+#### Test 2: Capture from Page (With OCR)
+1. Navigate to any webpage with Pokemon card images (e.g., pokemon.com, tcgplayer.com, serebii.net)
 2. Click the extension icon
 3. Click "Capture from Page"
 4. **Expected**: Page dims, images are highlighted with blue borders
-5. Click on any image
+5. Click on a Pokemon card image
 6. **Expected**: Image is captured and ready to analyze
 7. Click "Analyze Card"
-8. **Expected**: Shows a random Pokemon card with pricing and trend data
+8. **Expected**:
+   - OCR analyzes the captured card image
+   - Extension identifies the specific card
+   - Shows the actual card with real pricing data
 
 #### Test 3: Results Display
 1. After analyzing a card, verify:
@@ -64,7 +78,16 @@ Open Chrome DevTools (F12) while testing:
    - Go to chrome://extensions/
    - Find the extension
    - Click "service worker" link
-   - Check for errors (should see "Searching for Pokemon cards..." logs)
+   - **Expected logs**:
+     ```
+     Performing OCR on card image...
+     OCR extracted text: [raw text]
+     OCR completed. Extracted card info: {name: "Pikachu", hp: 60, ...}
+     Extracted card name from OCR: Pikachu
+     Searching for: name:"Pikachu"
+     Found matching card with pricing: Pikachu
+     ```
+   - Check for errors (should see successful OCR and search logs)
 
 2. **Popup Console**:
    - Right-click the extension popup
@@ -75,13 +98,43 @@ Open Chrome DevTools (F12) while testing:
    - Open DevTools on any webpage (F12)
    - Check Console tab when using "Capture from Page"
 
-## Known Limitations (As Designed)
+### 4. OCR-Specific Tests
 
-1. **No Real Card Recognition**: The extension doesn't actually recognize cards from images. It returns random cards from the Pokemon TCG API. This is documented in README.md as a future enhancement requiring OCR integration.
+#### Test OCR Accuracy:
+1. Upload a high-quality Pokemon card image with clear text
+2. Check service worker console for extracted text
+3. Verify the card name was correctly identified
+4. **Good test cards**: Base Set Charizard, Pikachu, Mewtwo (clear, well-lit images)
 
-2. **Demo Pricing Data**: For cards without pricing data, the extension generates simulated trend data for demonstration purposes.
+#### Test Fuzzy Matching:
+1. Upload a card image with partial text visibility
+2. OCR may extract incomplete card name
+3. Extension should still find a close match
+4. Check console for "Found fuzzy match:" logs
 
-3. **API Rate Limits**: The Pokemon TCG API has rate limits (1000 requests/hour). Extensive testing may hit these limits.
+#### Test Fallback Behavior:
+1. Upload a non-card image or very blurry card
+2. OCR may fail or extract unrecognizable text
+3. **Expected**: Extension falls back to showing a popular card
+4. Check console for "No card name extracted, showing recent popular cards..."
+
+## Known Limitations
+
+1. **OCR Accuracy**: OCR accuracy depends on image quality. Cards with:
+   - Poor lighting or glare
+   - Unusual fonts or holographic effects
+   - Rotated or skewed orientation
+   - Low resolution
+   May not be recognized accurately
+
+2. **Simulated Trend Data**: Historical price trends are generated based on current prices, not actual historical data
+
+3. **API Rate Limits**:
+   - OCR.space: Free tier has rate limits
+   - Pokemon TCG API: 10,000 requests/day with API key
+   - eBay API: Rate limits vary by RapidAPI subscription
+
+4. **eBay Pricing**: eBay average pricing may not be available for all cards or may require specific RapidAPI subscription settings
 
 ## Success Criteria
 
@@ -116,24 +169,39 @@ Open Chrome DevTools (F12) while testing:
 - Pokemon TCG API might be temporarily down
 - Extension will fall back to mock data if API fails
 
-## Next Steps for Full Functionality
+## API Keys Configured
 
-To make the extension actually recognize cards (beyond this demo):
+This extension now uses the following APIs:
 
-1. **Integrate OCR Service**:
-   - Option A: Google Cloud Vision API
-   - Option B: AWS Rekognition
-   - Option C: Tesseract.js in an offscreen document
-   - Option D: Azure Computer Vision
+1. **OCR.space API**
+   - Key configured in ocr.js
+   - Used for text extraction from card images
+   - Free tier: 25,000 requests/month
 
-2. **Update background.js** to send images to OCR service
-3. **Parse OCR results** to extract card name, set, and number
-4. **Search Pokemon TCG API** with extracted information
-5. **Match results** and display actual card data
+2. **Pokemon TCG API**
+   - Key configured in background.js
+   - Rate limit: 10,000 requests/day
+   - Provides card data and TCGPlayer pricing
+
+3. **RapidAPI - eBay Average Pricing**
+   - Key configured in background.js
+   - Fallback for cards without TCGPlayer pricing
+   - Rate limits vary by subscription
+
+## Future Enhancements
+
+1. **Improve OCR accuracy** with pre-processing (image enhancement, rotation correction)
+2. **Add card condition assessment** to adjust pricing
+3. **Implement caching** to reduce API calls
+4. **Add historical price data** from actual market sources
+5. **Support multiple languages** for international cards
+6. **Add barcode/QR code scanning** for faster identification
 
 ## Files Modified
 
 - `/home/user/chrome-ext/icons/icon16.png` - Created
 - `/home/user/chrome-ext/icons/icon48.png` - Created
 - `/home/user/chrome-ext/icons/icon128.png` - Created
-- `/home/user/chrome-ext/background.js` - Fixed service worker issues
+- `/home/user/chrome-ext/ocr.js` - Created (NEW - OCR integration)
+- `/home/user/chrome-ext/background.js` - Fixed service worker issues + added OCR + API keys
+- `/home/user/chrome-ext/manifest.json` - Added API host permissions
