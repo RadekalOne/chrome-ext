@@ -45,6 +45,7 @@ function createImageSelectionOverlay(images) {
         flex-direction: column;
         align-items: center;
         justify-content: center;
+        pointer-events: none;
     `;
 
     // Create instruction text
@@ -58,6 +59,7 @@ function createImageSelectionOverlay(images) {
         padding: 20px;
         background: rgba(102, 126, 234, 0.9);
         border-radius: 10px;
+        pointer-events: none;
     `;
     instruction.textContent = 'Click on a Pokemon card image to analyze it';
     overlay.appendChild(instruction);
@@ -77,15 +79,18 @@ function createImageSelectionOverlay(images) {
         font-weight: bold;
         cursor: pointer;
         z-index: 1000000;
+        pointer-events: auto;
     `;
     closeBtn.onclick = () => {
         overlay.remove();
         removeHighlights();
-        // No need to send response since popup is closed
+        console.log('Capture cancelled by user');
     };
     overlay.appendChild(closeBtn);
 
     document.body.appendChild(overlay);
+
+    console.log('Overlay created with pointer-events: none (won\'t block image clicks)');
 
     // Highlight images and add click handlers
     let highlightedCount = 0;
@@ -162,11 +167,7 @@ function createImageSelectionOverlay(images) {
     });
 
     console.log('Highlighted', highlightedCount, 'images for selection');
-
-    // Add click listener to the document to debug any clicks
-    document.addEventListener('click', function debugClick(e) {
-        console.log('Document click detected', e.target);
-    }, { once: false, capture: true });
+    console.log('✓ Overlay ready - images are clickable, overlay passes clicks through');
 }
 
 function removeHighlights() {
