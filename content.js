@@ -1,25 +1,35 @@
+// Prevent duplicate script loading
+if (window.pokemonCardExtensionLoaded) {
+    console.log('Pokemon Card Extension content script already loaded');
+} else {
+    window.pokemonCardExtensionLoaded = true;
+    console.log('Pokemon Card Extension content script loaded');
+}
+
 // Listen for messages from popup
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     if (request.action === 'captureImage') {
-        captureImageFromPage(sendResponse);
+        captureImageFromPage();
         return true; // Keep the message channel open for async response
     }
 });
 
-function captureImageFromPage(sendResponse) {
+function captureImageFromPage() {
     // Find all images on the page
     const images = Array.from(document.querySelectorAll('img'));
 
+    console.log('Found', images.length, 'total images on page');
+
     if (images.length === 0) {
-        sendResponse({ success: false, error: 'No images found on this page' });
+        console.log('No images found on this page');
         return;
     }
 
     // Create overlay for image selection
-    createImageSelectionOverlay(images, sendResponse);
+    createImageSelectionOverlay(images);
 }
 
-function createImageSelectionOverlay(images, sendResponse) {
+function createImageSelectionOverlay(images) {
     // Create overlay container
     const overlay = document.createElement('div');
     overlay.id = 'pokemon-card-overlay';
@@ -71,16 +81,19 @@ function createImageSelectionOverlay(images, sendResponse) {
     closeBtn.onclick = () => {
         overlay.remove();
         removeHighlights();
-        sendResponse({ success: false, error: 'Cancelled by user' });
+        // No need to send response since popup is closed
     };
     overlay.appendChild(closeBtn);
 
     document.body.appendChild(overlay);
 
     // Highlight images and add click handlers
+    let highlightedCount = 0;
     images.forEach((img) => {
         // Skip very small images (likely icons)
         if (img.width < 100 || img.height < 100) return;
+
+        highlightedCount++;
 
         // Add highlight effect
         const originalOutline = img.style.outline;
@@ -104,15 +117,40 @@ function createImageSelectionOverlay(images, sendResponse) {
             e.preventDefault();
             e.stopPropagation();
 
+            console.log('Selectable image clicked!', this.src);
+
             // Convert image to data URL
-            convertImageToDataURL(this, (dataUrl) => {
+            convertImageToDataURL(this, async (dataUrl) => {
+                console.log('Conversion result:', dataUrl ? 'Success' : 'Failed');
+
+                // Clean up overlay first
+                console.log('Cleaning up overlay and event listeners');
                 overlay.remove();
                 removeHighlights();
 
                 if (dataUrl) {
-                    sendResponse({ success: true, imageData: dataUrl });
+                    // Store the captured image in chrome.storage
+                    console.log('Attempting to store image in chrome.storage.local...');
+                    console.log('Image data size:', dataUrl.length, 'characters');
+
+                    try {
+                        await chrome.storage.local.set({ capturedImage: dataUrl });
+                        console.log('✓ Image stored successfully in chrome.storage.local');
+
+                        // Notify that image was captured
+                        chrome.runtime.sendMessage({ action: 'imageCaptured' }, (response) => {
+                            console.log('Message sent to background/popup');
+                        });
+
+                        // Show success notification
+                        showCaptureSuccessNotification();
+                    } catch (error) {
+                        console.error('✗ Error storing captured image:', error);
+                        showCaptureErrorNotification(error.message);
+                    }
                 } else {
-                    sendResponse({ success: false, error: 'Failed to capture image' });
+                    console.error('Failed to capture image - dataUrl is null');
+                    showCaptureErrorNotification('Failed to convert image');
                 }
             });
         }, { once: true });
@@ -122,10 +160,18 @@ function createImageSelectionOverlay(images, sendResponse) {
         img.dataset.originalCursor = originalCursor;
         img.dataset.originalZIndex = originalZIndex;
     });
+
+    console.log('Highlighted', highlightedCount, 'images for selection');
+
+    // Add click listener to the document to debug any clicks
+    document.addEventListener('click', function debugClick(e) {
+        console.log('Document click detected', e.target);
+    }, { once: false, capture: true });
 }
 
 function removeHighlights() {
     const selectableImages = document.querySelectorAll('.pokemon-card-selectable');
+    console.log('Removing highlights from', selectableImages.length, 'images');
     selectableImages.forEach((img) => {
         img.style.outline = img.dataset.originalOutline || '';
         img.style.cursor = img.dataset.originalCursor || '';
@@ -135,6 +181,8 @@ function removeHighlights() {
 }
 
 function convertImageToDataURL(img, callback) {
+    console.log('Converting image to data URL:', img.src);
+
     try {
         // Create a canvas
         const canvas = document.createElement('canvas');
@@ -144,15 +192,19 @@ function convertImageToDataURL(img, callback) {
         canvas.width = img.naturalWidth || img.width;
         canvas.height = img.naturalHeight || img.height;
 
+        console.log('Image dimensions:', canvas.width + 'x' + canvas.height);
+
         // Draw image on canvas
         ctx.drawImage(img, 0, 0);
 
         // Convert to data URL
         try {
             const dataUrl = canvas.toDataURL('image/png');
+            console.log('Canvas conversion successful, data URL length:', dataUrl.length);
             callback(dataUrl);
         } catch (e) {
             // If CORS error, try to fetch the image
+            console.log('Canvas CORS error, trying fetch method:', e.message);
             fetchImageAsDataURL(img.src, callback);
         }
     } catch (error) {
@@ -162,13 +214,85 @@ function convertImageToDataURL(img, callback) {
 }
 
 function fetchImageAsDataURL(url, callback) {
+    console.log('Attempting to fetch image:', url);
+
     fetch(url)
-        .then(response => response.blob())
+        .then(response => {
+            console.log('Image fetched successfully, size:', response.headers.get('content-length'));
+            return response.blob();
+        })
         .then(blob => {
+            console.log('Blob created, size:', blob.size);
             const reader = new FileReader();
-            reader.onloadend = () => callback(reader.result);
-            reader.onerror = () => callback(null);
+            reader.onloadend = () => {
+                console.log('FileReader conversion complete');
+                callback(reader.result);
+            };
+            reader.onerror = () => {
+                console.error('FileReader error');
+                callback(null);
+            };
             reader.readAsDataURL(blob);
         })
-        .catch(() => callback(null));
+        .catch(error => {
+            console.error('Fetch error:', error);
+            callback(null);
+        });
+}
+
+function showCaptureSuccessNotification() {
+    const notification = document.createElement('div');
+    notification.style.cssText = `
+        position: fixed;
+        top: 20px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: #38a169;
+        color: white;
+        padding: 15px 30px;
+        border-radius: 8px;
+        font-family: Arial, sans-serif;
+        font-size: 16px;
+        font-weight: bold;
+        z-index: 10000000;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        animation: slideDown 0.3s ease;
+    `;
+    notification.textContent = '✓ Card image captured! Click extension icon to continue.';
+
+    document.body.appendChild(notification);
+
+    setTimeout(() => {
+        notification.style.opacity = '0';
+        notification.style.transition = 'opacity 0.3s';
+        setTimeout(() => notification.remove(), 300);
+    }, 3000);
+}
+
+function showCaptureErrorNotification(message) {
+    const notification = document.createElement('div');
+    notification.style.cssText = `
+        position: fixed;
+        top: 20px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: #e53e3e;
+        color: white;
+        padding: 15px 30px;
+        border-radius: 8px;
+        font-family: Arial, sans-serif;
+        font-size: 16px;
+        font-weight: bold;
+        z-index: 10000000;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    `;
+    notification.textContent = '✗ Capture failed: ' + message;
+
+    document.body.appendChild(notification);
+
+    setTimeout(() => {
+        notification.style.opacity = '0';
+        notification.style.transition = 'opacity 0.3s';
+        setTimeout(() => notification.remove(), 300);
+    }, 4000);
 }

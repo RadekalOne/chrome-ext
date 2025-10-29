@@ -16,6 +16,21 @@ const scanAnotherBtn = document.getElementById('scanAnotherBtn');
 
 let currentImageData = null;
 
+// Check for captured image when popup opens
+document.addEventListener('DOMContentLoaded', async () => {
+    try {
+        const result = await chrome.storage.local.get('capturedImage');
+        if (result.capturedImage) {
+            // Image was captured, display it
+            handleImageData(result.capturedImage);
+            // Clear the stored image
+            await chrome.storage.local.remove('capturedImage');
+        }
+    } catch (error) {
+        console.error('Error checking for captured image:', error);
+    }
+});
+
 // Upload area interactions
 uploadArea.addEventListener('click', () => fileInput.click());
 
@@ -49,18 +64,20 @@ captureBtn.addEventListener('click', async () => {
     try {
         const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
 
+        // Clear any previous captured image
+        await chrome.storage.local.remove('capturedImage');
+
+        // Send message to content script to start capture mode
         chrome.tabs.sendMessage(tab.id, { action: 'captureImage' }, (response) => {
             if (chrome.runtime.lastError) {
                 showError('Please refresh the page and try again.');
                 return;
             }
-
-            if (response && response.imageData) {
-                handleImageData(response.imageData);
-            } else {
-                showError('No image found on the page. Please try uploading an image instead.');
-            }
         });
+
+        // Close the popup to allow user to interact with the page
+        // The captured image will be retrieved when popup reopens
+        window.close();
     } catch (error) {
         showError('Failed to capture image from page: ' + error.message);
     }

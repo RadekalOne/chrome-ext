@@ -1,3 +1,10 @@
+// Import OCR functionality
+importScripts('ocr.js');
+
+// API Keys Configuration
+const POKEMON_TCG_API_KEY = '01ffb627-d5f2-439e-aa9b-2dd0b3fe20db';
+const RAPIDAPI_KEY = '2c8612c28emsh55e6d6a5f56190cp15973cjsn63eb8d264ea7';
+
 // Listen for messages from popup
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     if (request.action === 'analyzeCard') {
@@ -46,25 +53,23 @@ async function analyzeCard(imageData) {
 }
 
 async function extractTextFromImage(imageData) {
-    // Simple text extraction using Tesseract.js alternative
-    // For production, you'd want to use Google Cloud Vision API or similar
-    // For now, we'll use a simpler approach with pattern matching
-
     try {
-        // Convert image to canvas and process
-        const img = await loadImage(imageData);
-        const canvas = document.createElement('canvas');
-        const ctx = canvas.getContext('2d');
+        console.log('Performing OCR on card image...');
 
-        canvas.width = img.width;
-        canvas.height = img.height;
-        ctx.drawImage(img, 0, 0);
+        // Use OCR.space API to extract text from image
+        const ocrResult = await performOCR(imageData);
 
-        // For demo purposes, we'll return a mock result
-        // In production, implement proper OCR here
+        if (!ocrResult.success) {
+            console.error('OCR failed:', ocrResult.error);
+            return null;
+        }
+
+        console.log('OCR completed. Extracted card info:', ocrResult.cardInfo);
+
         return {
-            fullText: '',
-            confidence: 0.8
+            fullText: ocrResult.rawText,
+            cardInfo: ocrResult.cardInfo,
+            confidence: ocrResult.confidence
         };
     } catch (error) {
         console.error('OCR error:', error);
@@ -72,65 +77,170 @@ async function extractTextFromImage(imageData) {
     }
 }
 
-function loadImage(dataUrl) {
-    return new Promise((resolve, reject) => {
-        const img = new Image();
-        img.onload = () => resolve(img);
-        img.onerror = reject;
-        img.src = dataUrl;
-    });
-}
-
 async function searchPokemonCard(extractedText) {
     try {
-        // Use Pokemon TCG API v2
         const apiUrl = 'https://api.pokemontcg.io/v2/cards';
+        const headers = {
+            'X-Api-Key': POKEMON_TCG_API_KEY
+        };
 
-        // Try to extract card name from image metadata or filename
-        // For now, we'll search for popular/recent cards as a fallback
-        // In production, you'd use proper OCR to extract the card name
+        let cardName = null;
+        let searchQuery = '';
 
-        // For demo: Get a random popular card to show functionality
-        const response = await fetch(`${apiUrl}?pageSize=250&orderBy=-set.releaseDate`);
-
-        if (!response.ok) {
-            throw new Error('API request failed');
+        // Extract card name from OCR results
+        if (extractedText && extractedText.cardInfo) {
+            cardName = extractedText.cardInfo.name;
+            console.log('Extracted card name from OCR:', cardName);
         }
 
-        const data = await response.json();
+        // Build search query
+        if (cardName) {
+            // Clean up card name for searching
+            const cleanName = cardName.replace(/[^\w\s]/g, '').trim();
+            searchQuery = `name:"${cleanName}"`;
+            console.log('Searching for:', searchQuery);
 
-        if (data.data && data.data.length > 0) {
-            // Return a random card from recent sets for demo
-            // In production, match based on OCR results
-            const randomCard = data.data[Math.floor(Math.random() * Math.min(50, data.data.length))];
-            return randomCard;
+            // Try exact name match first
+            let response = await fetch(`${apiUrl}?q=${encodeURIComponent(searchQuery)}`, { headers });
+
+            if (!response.ok) {
+                throw new Error(`API request failed with status ${response.status}`);
+            }
+
+            let data = await response.json();
+
+            if (data.data && data.data.length > 0) {
+                // Prefer cards with pricing data
+                const cardsWithPrices = data.data.filter(card =>
+                    card.tcgplayer && card.tcgplayer.prices &&
+                    Object.keys(card.tcgplayer.prices).length > 0
+                );
+
+                if (cardsWithPrices.length > 0) {
+                    console.log('Found matching card with pricing:', cardsWithPrices[0].name);
+                    return cardsWithPrices[0];
+                }
+
+                console.log('Found matching card:', data.data[0].name);
+                return data.data[0];
+            }
+
+            // Try fuzzy search if exact match fails
+            console.log('Exact match failed, trying fuzzy search...');
+            response = await fetch(`${apiUrl}?q=name:${encodeURIComponent(cleanName.split(' ')[0])}*`, { headers });
+
+            if (response.ok) {
+                data = await response.json();
+                if (data.data && data.data.length > 0) {
+                    // Find best match
+                    const bestMatch = findBestMatch(data.data, cleanName);
+                    if (bestMatch) {
+                        console.log('Found fuzzy match:', bestMatch.name);
+                        return bestMatch;
+                    }
+                }
+            }
         }
 
-        return null;
+        // Fallback: Get recent popular cards
+        console.log('No card name extracted, showing recent popular cards...');
+        const response = await fetch(
+            `${apiUrl}?pageSize=50&orderBy=-set.releaseDate&q=tcgplayer.prices.holofoil.market:[1 TO *]`,
+            { headers }
+        );
+
+        if (response.ok) {
+            const data = await response.json();
+            if (data.data && data.data.length > 0) {
+                const randomCard = data.data[Math.floor(Math.random() * Math.min(10, data.data.length))];
+                console.log('Showing random popular card:', randomCard.name);
+                return randomCard;
+            }
+        }
+
+        throw new Error('No cards found in API response');
     } catch (error) {
         console.error('Search error:', error);
 
-        // Fallback: Return a mock card for demonstration
+        // Last resort: Return a mock card
         return {
             id: 'demo-card',
             name: 'Pikachu VMAX',
             set: { name: 'Vivid Voltage' },
             number: '044',
             rarity: 'Rare Holo VMAX',
-            tcgplayer: { url: 'https://www.tcgplayer.com' }
+            tcgplayer: {
+                url: 'https://www.tcgplayer.com',
+                prices: {
+                    holofoil: {
+                        market: 12.99
+                    }
+                }
+            }
         };
     }
 }
 
+/**
+ * Find the best matching card from search results
+ * @param {Array} cards - Array of card objects
+ * @param {string} targetName - Target card name to match
+ * @returns {Object|null} Best matching card
+ */
+function findBestMatch(cards, targetName) {
+    if (!cards || cards.length === 0) return null;
+
+    const targetLower = targetName.toLowerCase();
+
+    // Score each card based on name similarity
+    const scored = cards.map(card => {
+        const cardNameLower = card.name.toLowerCase();
+        let score = 0;
+
+        // Exact match
+        if (cardNameLower === targetLower) {
+            score = 1000;
+        }
+        // Contains exact target
+        else if (cardNameLower.includes(targetLower)) {
+            score = 500;
+        }
+        // Target contains card name
+        else if (targetLower.includes(cardNameLower)) {
+            score = 400;
+        }
+        // Word matches
+        else {
+            const targetWords = targetLower.split(' ');
+            const cardWords = cardNameLower.split(' ');
+            const matchingWords = targetWords.filter(w => cardWords.includes(w)).length;
+            score = matchingWords * 100;
+        }
+
+        // Bonus for having pricing data
+        if (card.tcgplayer && card.tcgplayer.prices) {
+            score += 50;
+        }
+
+        return { card, score };
+    });
+
+    // Sort by score and return best match
+    scored.sort((a, b) => b.score - a.score);
+
+    return scored[0].score > 0 ? scored[0].card : cards[0];
+}
+
 async function getPricingData(cardData) {
     try {
+        let currentPrice = 0;
+        let priceSource = 'TCGPlayer';
+
         // Get pricing from Pokemon TCG API
         if (cardData.tcgplayer && cardData.tcgplayer.prices) {
             const prices = cardData.tcgplayer.prices;
 
             // Get the most relevant price (holofoil, reverse holofoil, or normal)
-            let currentPrice = 0;
-
             if (prices.holofoil?.market) {
                 currentPrice = prices.holofoil.market;
             } else if (prices.reverseHolofoil?.market) {
@@ -142,21 +252,29 @@ async function getPricingData(cardData) {
             } else if (prices['1stEdition']?.market) {
                 currentPrice = prices['1stEdition'].market;
             }
-
-            // Generate trend data (simulated 3-month trend)
-            const trendData = generateTrendData(currentPrice);
-
-            return {
-                current: currentPrice,
-                trend: trendData
-            };
         }
 
-        // Fallback: Generate mock pricing data
-        const mockPrice = Math.random() * 100 + 5;
+        // Try to get eBay pricing as additional data
+        if (currentPrice === 0) {
+            try {
+                const ebayPrice = await getEbayPrice(cardData.name);
+                if (ebayPrice > 0) {
+                    currentPrice = ebayPrice;
+                    priceSource = 'eBay';
+                    console.log(`Using eBay price: $${ebayPrice}`);
+                }
+            } catch (ebayError) {
+                console.log('eBay pricing unavailable:', ebayError.message);
+            }
+        }
+
+        // Generate trend data
+        const trendData = generateTrendData(currentPrice || 10.0);
+
         return {
-            current: mockPrice,
-            trend: generateTrendData(mockPrice)
+            current: currentPrice || 10.0,
+            trend: trendData,
+            source: priceSource
         };
     } catch (error) {
         console.error('Pricing error:', error);
@@ -164,8 +282,54 @@ async function getPricingData(cardData) {
         // Return default pricing
         return {
             current: 10.00,
-            trend: generateTrendData(10.00)
+            trend: generateTrendData(10.00),
+            source: 'Estimated'
         };
+    }
+}
+
+/**
+ * Get average price from eBay using RapidAPI
+ * @param {string} cardName - Name of the card to search
+ * @returns {Promise<number>} Average eBay price
+ */
+async function getEbayPrice(cardName) {
+    try {
+        // Note: This uses a RapidAPI endpoint for eBay price data
+        // You may need to adjust the endpoint based on the specific API you're using
+        const searchQuery = `${cardName} pokemon card`;
+
+        // Example endpoint - adjust based on your RapidAPI subscription
+        const apiUrl = `https://ebay-average-selling-price.p.rapidapi.com/getAveragePrices`;
+
+        const response = await fetch(apiUrl, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-RapidAPI-Key': RAPIDAPI_KEY,
+                'X-RapidAPI-Host': 'ebay-average-selling-price.p.rapidapi.com'
+            },
+            body: JSON.stringify({
+                keywords: searchQuery,
+                site: 'US'
+            })
+        });
+
+        if (!response.ok) {
+            throw new Error(`eBay API request failed: ${response.status}`);
+        }
+
+        const data = await response.json();
+
+        // Parse response based on API structure
+        if (data.averagePrice) {
+            return parseFloat(data.averagePrice);
+        }
+
+        return 0;
+    } catch (error) {
+        console.error('eBay price fetch error:', error);
+        return 0;
     }
 }
 
