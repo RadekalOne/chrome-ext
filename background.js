@@ -11,6 +11,11 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         analyzeCard(request.imageData).then(sendResponse);
         return true; // Keep the message channel open for async response
     }
+
+    if (request.action === 'searchCardManually') {
+        searchCardManually(request.cardName, request.cardSet).then(sendResponse);
+        return true; // Keep the message channel open for async response
+    }
 });
 
 async function analyzeCard(imageData) {
@@ -369,6 +374,114 @@ function getDateWeeksAgo(weeks) {
     const date = new Date();
     date.setDate(date.getDate() - weeks * 7);
     return date.toISOString().split('T')[0];
+}
+
+/**
+ * Search for a card manually without OCR
+ * @param {string} cardName - The card name to search for
+ * @param {string} cardSet - Optional set name or number
+ * @returns {Promise<Object>} Search result
+ */
+async function searchCardManually(cardName, cardSet) {
+    try {
+        console.log('Manual card search:', cardName, cardSet || '(any set)');
+
+        const apiUrl = 'https://api.pokemontcg.io/v2/cards';
+        const headers = {
+            'X-Api-Key': POKEMON_TCG_API_KEY
+        };
+
+        // Build search query
+        let searchQuery = `name:"${cardName}"`;
+
+        // Add set filter if provided
+        if (cardSet) {
+            // Check if it looks like a set number (e.g., 074/185)
+            if (cardSet.includes('/')) {
+                searchQuery += ` number:${cardSet}`;
+            } else {
+                // Assume it's a set name
+                searchQuery += ` set.name:"${cardSet}"`;
+            }
+        }
+
+        console.log('Searching with query:', searchQuery);
+
+        // Try exact search first
+        let response = await fetch(`${apiUrl}?q=${encodeURIComponent(searchQuery)}`, { headers });
+
+        if (!response.ok) {
+            throw new Error(`API request failed with status ${response.status}`);
+        }
+
+        let data = await response.json();
+
+        if (data.data && data.data.length > 0) {
+            // Prefer cards with pricing data
+            const cardsWithPrices = data.data.filter(card =>
+                card.tcgplayer && card.tcgplayer.prices &&
+                Object.keys(card.tcgplayer.prices).length > 0
+            );
+
+            const selectedCard = cardsWithPrices.length > 0 ? cardsWithPrices[0] : data.data[0];
+            console.log('Found card:', selectedCard.name, selectedCard.set.name);
+
+            // Get pricing data
+            const pricingData = await getPricingData(selectedCard);
+
+            // Return formatted result
+            const result = {
+                name: selectedCard.name,
+                set: selectedCard.set?.name || 'Unknown Set',
+                number: selectedCard.number,
+                rarity: selectedCard.rarity,
+                price: pricingData,
+                links: {
+                    tcgplayer: selectedCard.tcgplayer?.url || `https://www.tcgplayer.com/search/pokemon/product?q=${encodeURIComponent(selectedCard.name)}`,
+                    cardmarket: `https://www.cardmarket.com/en/Pokemon/Products/Search?searchString=${encodeURIComponent(selectedCard.name)}`
+                }
+            };
+
+            return { success: true, data: result };
+        }
+
+        // If exact match fails, try fuzzy search
+        console.log('Exact match failed, trying fuzzy search...');
+        const fuzzyQuery = `name:${cardName.split(' ')[0]}*`;
+        response = await fetch(`${apiUrl}?q=${encodeURIComponent(fuzzyQuery)}`, { headers });
+
+        if (response.ok) {
+            data = await response.json();
+            if (data.data && data.data.length > 0) {
+                // Find best match
+                const bestMatch = findBestMatch(data.data, cardName);
+                if (bestMatch) {
+                    console.log('Found fuzzy match:', bestMatch.name);
+
+                    const pricingData = await getPricingData(bestMatch);
+
+                    const result = {
+                        name: bestMatch.name,
+                        set: bestMatch.set?.name || 'Unknown Set',
+                        number: bestMatch.number,
+                        rarity: bestMatch.rarity,
+                        price: pricingData,
+                        links: {
+                            tcgplayer: bestMatch.tcgplayer?.url || `https://www.tcgplayer.com/search/pokemon/product?q=${encodeURIComponent(bestMatch.name)}`,
+                            cardmarket: `https://www.cardmarket.com/en/Pokemon/Products/Search?searchString=${encodeURIComponent(bestMatch.name)}`
+                        }
+                    };
+
+                    return { success: true, data: result };
+                }
+            }
+        }
+
+        return { success: false, error: `Card "${cardName}" not found. Try a different spelling or check the card name.` };
+    } catch (error) {
+        console.error('Manual search error:', error);
+        return { success: false, error: error.message };
+    }
 }
 
 // API configuration storage

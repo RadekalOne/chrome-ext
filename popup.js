@@ -14,6 +14,19 @@ const errorText = document.getElementById('errorText');
 const retryBtn = document.getElementById('retryBtn');
 const scanAnotherBtn = document.getElementById('scanAnotherBtn');
 
+// Manual search elements
+const manualSearchSection = document.getElementById('manualSearchSection');
+const manualSearchBtn = document.getElementById('manualSearchBtn');
+const manualSearchToggle = document.getElementById('manualSearchToggle');
+const searchManualBtn = document.getElementById('searchManualBtn');
+const manualSearchText = document.getElementById('manualSearchText');
+const manualSearchLoader = document.getElementById('manualSearchLoader');
+const manualCardName = document.getElementById('manualCardName');
+const manualCardSet = document.getElementById('manualCardSet');
+const backToUploadBtn = document.getElementById('backToUploadBtn');
+const searchAgainBtn = document.getElementById('searchAgainBtn');
+const manualSearchFromError = document.getElementById('manualSearchFromError');
+
 let currentImageData = null;
 
 // Check for captured image when popup opens
@@ -123,6 +136,66 @@ analyzeBtn.addEventListener('click', async () => {
 // Retry and scan another
 retryBtn.addEventListener('click', resetToUpload);
 scanAnotherBtn.addEventListener('click', resetToUpload);
+
+// Manual search from main screen
+manualSearchBtn.addEventListener('click', () => {
+    showManualSearch();
+});
+
+// Manual search toggle from preview
+manualSearchToggle.addEventListener('click', () => {
+    showManualSearch();
+});
+
+// Manual search from error
+manualSearchFromError.addEventListener('click', () => {
+    showManualSearch();
+});
+
+// Search again from results (wrong card)
+searchAgainBtn.addEventListener('click', () => {
+    showManualSearch();
+});
+
+// Back to upload from manual search
+backToUploadBtn.addEventListener('click', () => {
+    resetToUpload();
+});
+
+// Perform manual search
+searchManualBtn.addEventListener('click', async () => {
+    const cardName = manualCardName.value.trim();
+    const cardSet = manualCardSet.value.trim();
+
+    if (!cardName) {
+        alert('Please enter a card name');
+        manualCardName.focus();
+        return;
+    }
+
+    await performManualSearch(cardName, cardSet);
+});
+
+// Enter key to search
+manualCardName.addEventListener('keypress', async (e) => {
+    if (e.key === 'Enter') {
+        const cardName = manualCardName.value.trim();
+        const cardSet = manualCardSet.value.trim();
+        if (cardName) {
+            await performManualSearch(cardName, cardSet);
+        }
+    }
+});
+
+manualCardSet.addEventListener('keypress', async (e) => {
+    if (e.key === 'Enter') {
+        const cardName = manualCardName.value.trim();
+        const cardSet = manualCardSet.value.trim();
+        if (cardName) {
+            await performManualSearch(cardName, cardSet);
+        }
+    }
+});
 
 // Helper functions
 function handleImageUpload(file) {
@@ -280,4 +353,61 @@ function resetToUpload() {
     previewSection.style.display = 'none';
     resultsSection.style.display = 'none';
     errorSection.style.display = 'none';
+    manualSearchSection.style.display = 'none';
+}
+
+function showManualSearch() {
+    document.querySelector('.upload-section').style.display = 'none';
+    previewSection.style.display = 'none';
+    resultsSection.style.display = 'none';
+    errorSection.style.display = 'none';
+    manualSearchSection.style.display = 'block';
+
+    // Clear previous input but keep it if coming from error/results
+    // manualCardName.value = '';
+    // manualCardSet.value = '';
+
+    // Focus on card name input
+    setTimeout(() => manualCardName.focus(), 100);
+}
+
+async function performManualSearch(cardName, cardSet) {
+    console.log('Manual search:', cardName, cardSet || '(no set)');
+
+    // Show loading state
+    searchManualBtn.disabled = true;
+    manualSearchText.style.display = 'none';
+    manualSearchLoader.style.display = 'inline-block';
+
+    try {
+        // Send manual search request to background script
+        chrome.runtime.sendMessage({
+            action: 'searchCardManually',
+            cardName: cardName,
+            cardSet: cardSet
+        }, (response) => {
+            // Hide loading state
+            searchManualBtn.disabled = false;
+            manualSearchText.style.display = 'inline';
+            manualSearchLoader.style.display = 'none';
+
+            if (chrome.runtime.lastError) {
+                showError('Search failed: ' + chrome.runtime.lastError.message);
+                return;
+            }
+
+            if (response.success) {
+                displayResults(response.data);
+            } else {
+                showError(response.error || 'Card not found. Try a different search.');
+            }
+        });
+    } catch (error) {
+        // Hide loading state
+        searchManualBtn.disabled = false;
+        manualSearchText.style.display = 'inline';
+        manualSearchLoader.style.display = 'none';
+
+        showError('Search failed: ' + error.message);
+    }
 }
